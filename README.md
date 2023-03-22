@@ -1,0 +1,2 @@
+# SnakeMakeAnalysis
+Analysis using snakemake
