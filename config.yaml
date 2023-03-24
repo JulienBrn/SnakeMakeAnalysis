@@ -1,0 +1,49 @@
+
+
+
+input_info:
+  base_folder: "/run/user/1000/gvfs/smb-share:server=filer2-imn,share=t4/Julien/MarcAnalysis/Inputs"
+  inputs_files_database_cache: 
+    electrophisiology: 
+      path: "Cache/input_file_database/electrophisiology.tsv"
+      recompute: No
+
+  inputs:
+    &input_name MonkeyData: 
+      out_dataframe: electrophisiology
+      input_files_folder: "MonkeyData4Review"
+      #List of file patterns to match
+      file_patterns: 
+        - "{condition}/{subject}/{structure}/{date}/{unit}.mat"
+      # Columns of resulting dataframe. 
+      # May use the variables of file_patterns as well as full_path and rel_path
+      metadata_file: null
+      columns: 
+        condition: "{condition}"
+        subject: "{subject}"
+        structure: "{structure}"
+        date: "{date}"
+        unit: "{unit}"
+        file_id: "MonkeyData4Review/{condition}/{subject}/{structure}/{date}/{unit}"
+        rel_path: "{rel_path}"
+        full_path: "{full_path}"
+        fs: 25000
+        input_dir: *input_name
+
+run_params:
+  electrophisiology:
+    selector:
+      filter: null #string passed to pandas.query
+      sort_by: # Here we rely on order why is not in yaml specs
+        subject: "asc"
+        structure: "desc"
+      partition_by: ["condition", "structure"]
+      select_range_per_partition: [0, 2]
+    params:
+      rm_artefacts:
+        deviation: 7
+
+output_info:
+  base_folder: "/run/user/1000/gvfs/smb-share:server=filer2-imn,share=t4/Julien/MarcAnalysis/Results"
+  locations:
+      rm_artefacts: "rm_artefacts"
