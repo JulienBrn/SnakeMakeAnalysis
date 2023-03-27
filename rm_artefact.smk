@@ -1,36 +1,21 @@
-import toolbox
 
-configfile: "config.yaml"
-
-all_files = toolbox.files_as_database(config["input_info"])
-run_files = {
-  dfname: toolbox.database_select(df, config["run_params"][dfname]["selector"]) 
-  if dfname in config["run_params"] and "selector" in config["run_params"][dfname]
-  else df
-  for dfname, df in all_files.items()
-}
-
-samples_df = run_files["electrophisiology"]
+samples_df= config["samples"]
 samples_df["sample_id"] = samples_df["file_id"]
 samples_df["sample_path"] = samples_df["full_path"]
 samples_df.set_index("sample_id", drop=False, inplace=True)
 
-config = {
-  "date": "date",
-  "result_folder": ".",
-  "clean_params": "clean_params",
-  "figure_params": "figure_params"
-}
+mconfig = config["config"]
+
 
 def get_value_from_id(sample_id, col):
   return samples_df.at[sample_id, col]
 
-samples_path = "{result_folder}/{clean_params}/run_info_{date}/samples.txt".format(**config)
+samples_path = "{result_folder}/{clean_params}/run_info_{date}/samples.txt".format(**mconfig)
 raw_path = lambda wildcards: get_value_from_id(wildcards["sample_id"], "sample_path")
-cleaned_path = "{result_folder}/{clean_params}/results/".format(**config)+ "{sample_id}_signal.npy"
-summary_path = "{result_folder}/{clean_params}/results/".format(**config)+ "{sample_id}_summary.tsv"
-figure_path = "{result_folder}/{clean_params}/figures/".format(**config)+"{sample_id}"+"_fp={figure_params}.png".format(**config)
-overallsummary_path = "{result_folder}/{clean_params}/run_info_{date}/overallsummary.tsv".format(**config)
+cleaned_path = "{result_folder}/{clean_params}/results/".format(**mconfig)+ "{sample_id}_signal.npy"
+summary_path = "{result_folder}/{clean_params}/results/".format(**mconfig)+ "{sample_id}_summary.tsv"
+figure_path = "{result_folder}/{clean_params}/figures/".format(**mconfig)+"{sample_id}"+"_fp={figure_params}.png".format(**mconfig)
+overallsummary_path = "{result_folder}/{clean_params}/run_info_{date}/overallsummary.tsv".format(**mconfig)
 
 all_summaries_paths = [summary_path.format(sample_id=sample_id) for sample_id in samples_df["sample_id"]]
 all_cleaned_paths = [cleaned_path.format(sample_id=sample_id) for sample_id in samples_df["sample_id"]]
