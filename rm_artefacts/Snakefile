@@ -4,16 +4,20 @@ configfile: "config.yaml"
 
 all_files = toolbox.files_as_database(config["input_info"])
 run_files = {
-  dfname: toolbox.database_select(df, config["run_params"]["selection"][dfname]) 
-  if "selection" in config["run_params"] and dfname in config["run_params"]["selection"]
+  dfname: toolbox.database_select(df, config["run_params"][dfname]["selector"]) 
+  if dfname in config["run_params"] and "selector" in config["run_params"][dfname]
   else df
   for dfname, df in all_files.items()
 }
 
 samples_df= run_files["electrophisiology"]
+samples_df["sample_id"] = samples_df["file_id"]
+samples_df["sample_path"] = samples_df["full_path"]
 samples_df.set_index("sample_id", drop=False, inplace=True)
 
-rmartconfig = config["run_params"]["exec_params"]["rm_artefacts"]
+
+
+rmartconfig = config["run_params"]["electrophisiology"]["params"]["rm_artefacts"]
 rmartconfig["file_structure"]["result_folder"] = config["output_info"]["base_folder"] + "/"+ rmartconfig["file_structure"]["result_folder"]
 rmartconfig["run_info"]["date"] = toolbox.roundTime(datetime.datetime.now(), 1)
 
@@ -24,10 +28,11 @@ config_rm_artefact = {
 
 
 module rm_artefacts:
-  snakefile: "rm_artefacts/rm_artefacts2.smk"
+  snakefile: "rm_artefacts2.smk"
   config: config_rm_artefact
 
 
 use rule * from rm_artefacts as clean_*
 
-print(rules.clean_all.ouput)
+# clean_df = pd.DataFrame()
+# clean_df["sample_path"] = samples_df.apply(lambda row: rules.clean_rm_artefacts.output.format(**rmartconfig))

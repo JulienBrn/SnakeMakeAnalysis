@@ -1,49 +1,91 @@
 
+variables:
+  base_folder: &base_folder "/run/user/1000/gvfs/smb-share:server=filer2-imn,share=t4/Julien/MarcAnalysis"
+
+#Information about the input data (not the process). Should almost never change.
+input:
+  - dataframe: electrophisiology
+    files:
+      - file_scan:
+          path: *base_folder "/Inputs/MonkeyData4Review":
+          cached_into: *base_folder "/.cache/electrophisiology/MonkeyData4Review_scan.txt"
+          rescan: No
+          file_patterns: #relative to path
+            - "{condition}/{subject}/{structure}/{date}/{unit}.mat"
+    metadata: null #A list of tsv files possibly ith join keys. Not handled yet
+    columns: 
+      condition: "{condition}"
+      subject: "{subject}"
+      structure: "{structure}"
+      date: "{date}"
+      unit: "{unit}"
+      sample_id: "MonkeyData4Review/{condition}/{subject}/{structure}/{date}/{unit}"
+      group_id: "{subject}, {structure}"
+      sample_path: *base_folder "/Inputs/MonkeyData4Review/{file}"
+      fs: 25000
+
+#Subselecting part of the input on which to run
+run_selection:
+  - dataframes: all #Applies to all dataframes
+    group_id: 
+      range: null
+      group_range: [0, 2]
+      in: null
+      notin: null
+     
+run_params: #Format will need to change to handle sample level run parameters
+  variables:
+    base_folder: *base_folder
+    signal: ["lfp", "mu"]
+  rm_artefacts:
+    variables: 
+      base_folder: *base_folder
+    clean_params:
+      version: 2
+      deviation_factor: 5
+      min_length: 0.003
+      shoulder_width: 1
+      join_width: 3
+      recursive: True
+      replace_type: affine
+    figure_params: 
+      version: 1
+      wdith: 10
+      height: 10
+      dpi: 100
+      down_sampling: 10
+  extract_signals:
+    variables: 
+      base_folder: *base_folder
+    lfp_params:
+      version: 1
+      filter_freq: 200
+      order: 3
+      out_fs: 500
+    mu_params:
+      version: 1
+      method: "abs"
+      filter_low_freq: 300
+      filter_high_freq: 6000
+      filter_refreq: 1000
+      order: 3
+      out_fs: 1000
+    spike_params:
+      method: "precomputed"
+  pwelch:
+    variables:
+      base_folder: *base_folder
+      signal: ["lfp", "mu"]
 
 
-input_info:
-  base_folder: "/run/user/1000/gvfs/smb-share:server=filer2-imn,share=t4/Julien/MarcAnalysis/Inputs"
-  inputs_files_database_cache: 
-    electrophisiology: 
-      path: "Cache/input_file_database/electrophisiology.tsv"
-      recompute: No
 
-  inputs:
-    &input_name MonkeyData: 
-      out_dataframe: electrophisiology
-      input_files_folder: "MonkeyData4Review"
-      #List of file patterns to match
-      file_patterns: 
-        - "{condition}/{subject}/{structure}/{date}/{unit}.mat"
-      # Columns of resulting dataframe. 
-      # May use the variables of file_patterns as well as full_path and rel_path
-      metadata_file: null
-      columns: 
-        condition: "{condition}"
-        subject: "{subject}"
-        structure: "{structure}"
-        date: "{date}"
-        unit: "{unit}"
-        file_id: "MonkeyData4Review/{condition}/{subject}/{structure}/{date}/{unit}"
-        rel_path: "{rel_path}"
-        full_path: "{full_path}"
-        fs: 25000
-        input_dir: *input_name
-
-run_params:
-  electrophisiology:
-    selector:
-      filter: null #string passed to pandas.query
-      sort_by: # Here we rely on order why is not in yaml specs
-        subject: "asc"
-        structure: "desc"
-      partition_by: ["condition", "structure"]
-      select_range_per_partition: [0, 2]
-    params:
-      rm_artefacts:
-        deviation: 7
-
-output_info:
-  base_folder: "/run/user/1000/gvfs/smb-share:server=filer2-imn,share=t4/Julien/MarcAnalysis/Results"
-  locations:
-      rm_artefacts: "rm_artefacts"
+file_structure:
+  rm_artefacts:
+    cleaned_path: "{base_folder}/Cleaned/{rm_artefacts.clean_params_str}/results/{electrophisiology.sample_id}_signal.npy"
+    summary_path: "{base_folder}/Cleaned/{rm_artefacts.clean_params_str}/results/{electrophisiology.sample_id}_summary.tsv"
+    figure_path:  "{base_folder}/Cleaned/{rm_artefacts.clean_params_str}/figures/{electrophisiology.sample_id}_fp={rm_artefacts.figure_params_str}.png"
+  extract_signals:
+    signal_path: *base_folder "/Signals/{signal}/{lfp_params_str}/{clean_params_str}/results/{sample_id}_signal.npy"
+    signal_metadata_path: *base_folder "/Signals/{signal}/{lfp_params_str}/{clean_params_str}/results/{sample_id}_metadata.json"
+  pwelch_analysis:
+    pwelch_path: *base_folder "/Pwelch/{pwelch_params_str}/{signal}/{lfp_params_str}/{clean_params_str}/results/{sample_id}_signal.npy"
